@@ -1,7 +1,7 @@
 import { appName } from '../config'
 import { Record } from 'immutable'
 import { createSelector } from 'reselect'
-import { takeEvery, call, put, all } from 'redux-saga/effects'
+import { take, takeEvery, call, put, all } from 'redux-saga/effects'
 import api from '../services/api'
 
 /**
@@ -93,19 +93,29 @@ export function signUp(email, password) {
  * Sagas
  */
 
-export function* signInSaga({ payload: { email, password } }) {
-  try {
-    const user = yield call(api.signIn, email, password)
+export function* signInSaga() {
+  for (let i = 0; i < 3; i++) {
+    const action = yield take(SIGN_IN_REQUEST)
 
-    yield put({
-      type: SIGN_IN_SUCCESS,
-      payload: { user }
-    })
-  } catch (error) {
-    yield put({
-      type: SIGN_IN_ERROR,
-      error
-    })
+    const {
+      payload: { email, password }
+    } = action
+
+    try {
+      const user = yield call(api.signIn, email, password)
+
+      yield put({
+        type: SIGN_IN_SUCCESS,
+        payload: { user }
+      })
+
+      i = 0
+    } catch (error) {
+      yield put({
+        type: SIGN_IN_ERROR,
+        error
+      })
+    }
   }
 }
 
@@ -126,8 +136,5 @@ export function* signUpSaga({ payload: { email, password } }) {
 }
 
 export function* saga() {
-  yield all([
-    takeEvery(SIGN_IN_REQUEST, signInSaga),
-    takeEvery(SIGN_UP_REQUEST, signUpSaga)
-  ])
+  yield all([takeEvery(SIGN_UP_REQUEST, signUpSaga), signInSaga()])
 }
